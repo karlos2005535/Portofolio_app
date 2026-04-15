@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class ProjectsScreen extends StatelessWidget {
-  const ProjectsScreen({Key? key}) : super(key: key);
+  const ProjectsScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -48,7 +48,7 @@ class ProjectsScreen extends StatelessWidget {
             itemBuilder: (context, index) {
               return Card(
                 elevation: 4,
-                clipBehavior: Clip.AntiAlias,
+                clipBehavior: Clip.antiAlias,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
