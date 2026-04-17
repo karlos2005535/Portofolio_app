@@ -1,148 +1,79 @@
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
-import 'dart:typed_data';
 
 void main() {
-  runApp(const TaskManagerApp());
+  runApp(const MyPortfolioApp());
 }
 
-class TaskManagerApp extends StatelessWidget {
-  const TaskManagerApp({super.key});
+class MyPortfolioApp extends StatelessWidget {
+  const MyPortfolioApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Task Master',
+      title: 'Tom\'s Workspace',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.deepPurple,
+          seedColor: Colors.teal,
+          secondary: Colors.deepPurple,
           brightness: Brightness.light,
+          surfaceTint: Colors.white, // Membuat background card lebih bersih
         ),
         textTheme: const TextTheme(
           displayLarge: TextStyle(
             fontSize: 28,
             fontWeight: FontWeight.bold,
-            color: Colors.deepPurple,
+            color: Colors.teal,
           ),
           titleLarge: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-          bodyLarge: TextStyle(fontSize: 16, color: Colors.black87),
-          bodyMedium: TextStyle(fontSize: 14, color: Colors.black54),
+          titleMedium: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+          bodyLarge: TextStyle(
+            fontSize: 16,
+            height: 1.5,
+            color: Colors.black87,
+          ),
         ),
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.deepPurple,
-          foregroundColor: Colors.white,
-          centerTitle: true,
-        ),
-        floatingActionButtonTheme: const FloatingActionButtonThemeData(
-          backgroundColor: Colors.deepPurple,
-          foregroundColor: Colors.white,
+        cardTheme: CardTheme(
+          elevation: 4,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          shadowColor: Colors.teal.withOpacity(0.2),
         ),
       ),
-      home: const DashboardScreen(),
+      home: const MainLayout(),
     );
   }
 }
 
-class Task {
-  String id;
-  String title;
-  String description;
-  String status;
-
-  Task({
-    required this.id,
-    required this.title,
-    required this.description,
-    required this.status,
-  });
-}
-
-class DashboardScreen extends StatefulWidget {
-  const DashboardScreen({super.key});
+// ================= LAYOUT UTAMA DENGAN NAVIGASI =================
+class MainLayout extends StatefulWidget {
+  const MainLayout({super.key});
 
   @override
-  State<DashboardScreen> createState() => _DashboardScreenState();
+  State<MainLayout> createState() => _MainLayoutState();
 }
 
-class _DashboardScreenState extends State<DashboardScreen> {
-  List<Task> tasks = [
-    Task(
-      id: '1',
-      title: 'Setup GitLab CI/CD',
-      description:
-          'Konfigurasi pipeline otomatis untuk deployment aplikasi E-Posyandu.',
-      status: 'In Progress',
-    ),
-    Task(
-      id: '2',
-      title: 'Konfigurasi Sensor IoT',
-      description:
-          'Integrasi ESP32 dengan sensor suhu dan pengiriman data ke bot Telegram.',
-      status: 'To Do',
-    ),
-    Task(
-      id: '3',
-      title: 'Selesaikan Skripsi Bab 1',
-      description:
-          'Menyusun latar belakang terkait tracking distribusi waktu nyata.',
-      status: 'Done',
-    ),
+class _MainLayoutState extends State<MainLayout> {
+  int _selectedIndex = 0;
+
+  // Daftar layar yang akan ditampilkan
+  final List<Widget> _screens = const [
+    HomeScreen(),
+    ProjectsScreen(),
+    TaskDashboard(),
   ];
 
-  void _addNewTask(String title, String description) {
+  // Daftar nama layar untuk keperluan Print Log
+  final List<String> _screenNames = ['Profile', 'Projects', 'Tasks'];
+
+  void _onItemTapped(int index) {
     setState(() {
-      tasks.add(
-        Task(
-          id: DateTime.now().toString(),
-          title: title,
-          description: description,
-          status: 'To Do',
-        ),
-      );
+      _selectedIndex = index;
     });
-  }
-
-  void _showAddTaskDialog() {
-    TextEditingController titleCtrl = TextEditingController();
-    TextEditingController descCtrl = TextEditingController();
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Tambah Tugas Baru'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: titleCtrl,
-              decoration: const InputDecoration(labelText: 'Judul Tugas'),
-            ),
-            TextField(
-              controller: descCtrl,
-              decoration: const InputDecoration(labelText: 'Deskripsi'),
-              maxLines: 3,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Batal'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              if (titleCtrl.text.isNotEmpty) {
-                _addNewTask(titleCtrl.text, descCtrl.text);
-                Navigator.pop(context);
-              }
-            },
-            child: const Text('Simpan'),
-          ),
-        ],
-      ),
-    );
+    // Menambahkan Print sesuai permintaan
+    print('✅ Berpindah ke menu: ${_screenNames[index]} (Index: $index)');
   }
 
   @override
@@ -150,336 +81,105 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final isDesktop = MediaQuery.of(context).size.width > 600;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Dashboard Tugas'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.person),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const ProfileScreen()),
-              );
-            },
-          ),
-        ],
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Ringkasan', style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 16),
-            isDesktop
-                ? Row(
-                    children: [
-                      Expanded(
-                        child: _buildSummaryCard(
-                          'To Do',
-                          tasks.where((t) => t.status == 'To Do').length,
-                          Colors.orange,
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: _buildSummaryCard(
-                          'In Progress',
-                          tasks.where((t) => t.status == 'In Progress').length,
-                          Colors.blue,
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: _buildSummaryCard(
-                          'Done',
-                          tasks.where((t) => t.status == 'Done').length,
-                          Colors.green,
-                        ),
-                      ),
-                    ],
-                  )
-                : Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      _buildSummaryCard(
-                        'To Do',
-                        tasks.where((t) => t.status == 'To Do').length,
-                        Colors.orange,
-                      ),
-                      const SizedBox(height: 12),
-                      _buildSummaryCard(
-                        'In Progress',
-                        tasks.where((t) => t.status == 'In Progress').length,
-                        Colors.blue,
-                      ),
-                      const SizedBox(height: 12),
-                      _buildSummaryCard(
-                        'Done',
-                        tasks.where((t) => t.status == 'Done').length,
-                        Colors.green,
-                      ),
-                    ],
+      body: isDesktop
+          ? Row(
+              children: [
+                NavigationRail(
+                  selectedIndex: _selectedIndex,
+                  onDestinationSelected: _onItemTapped,
+                  labelType: NavigationRailLabelType.all,
+                  backgroundColor: Colors.teal.shade50,
+                  selectedIconTheme: IconThemeData(
+                    color: Theme.of(context).colorScheme.primary,
                   ),
-            const SizedBox(height: 24),
-            Text('Daftar Tugas', style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 16),
-            Expanded(
-              child: ListView.builder(
-                itemCount: tasks.length,
-                itemBuilder: (context, index) {
-                  final task = tasks[index];
-                  return Card(
-                    elevation: 2,
-                    margin: const EdgeInsets.only(bottom: 12),
-                    child: ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor: _getStatusColor(
-                          task.status,
-                        ).withOpacity(0.2),
-                        child: Icon(
-                          _getStatusIcon(task.status),
-                          color: _getStatusColor(task.status),
-                        ),
-                      ),
-                      title: Text(
-                        task.title,
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      subtitle: Text(task.status),
-                      trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                      onTap: () async {
-                        final updatedTask = await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => TaskDetailScreen(task: task),
-                          ),
-                        );
-                        if (updatedTask != null) {
-                          setState(() {
-                            tasks[index] = updatedTask;
-                          });
-                        }
-                      },
+                  destinations: const [
+                    NavigationRailDestination(
+                      icon: Icon(Icons.person_outline),
+                      selectedIcon: Icon(Icons.person),
+                      label: Text('Profile'),
                     ),
-                  );
-                },
-              ),
+                    NavigationRailDestination(
+                      icon: Icon(Icons.work_outline),
+                      selectedIcon: Icon(Icons.work),
+                      label: Text('Projects'),
+                    ),
+                    NavigationRailDestination(
+                      icon: Icon(Icons.task_alt_outlined),
+                      selectedIcon: Icon(Icons.task_alt),
+                      label: Text('Tasks'),
+                    ),
+                  ],
+                ),
+                const VerticalDivider(thickness: 1, width: 1),
+                Expanded(child: _screens[_selectedIndex]),
+              ],
+            )
+          : _screens[_selectedIndex],
+      bottomNavigationBar: isDesktop
+          ? null
+          : NavigationBar(
+              selectedIndex: _selectedIndex,
+              onDestinationSelected: _onItemTapped,
+              backgroundColor: Colors.white,
+              indicatorColor: Colors.teal.shade100,
+              destinations: const [
+                NavigationDestination(
+                  icon: Icon(Icons.person_outline),
+                  selectedIcon: Icon(Icons.person, color: Colors.teal),
+                  label: 'Profile',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.work_outline),
+                  selectedIcon: Icon(Icons.work, color: Colors.teal),
+                  label: 'Projects',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.task_alt_outlined),
+                  selectedIcon: Icon(Icons.task_alt, color: Colors.teal),
+                  label: 'Tasks',
+                ),
+              ],
             ),
-          ],
-        ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _showAddTaskDialog,
-        child: const Icon(Icons.add),
-      ),
     );
-  }
-
-  Widget _buildSummaryCard(String title, int count, Color color) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.5)),
-      ),
-      child: Column(
-        children: [
-          Text(
-            count.toString(),
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            title,
-            style: TextStyle(fontWeight: FontWeight.bold, color: color),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Color _getStatusColor(String status) {
-    if (status == 'Done') return Colors.green;
-    if (status == 'In Progress') return Colors.blue;
-    return Colors.orange;
-  }
-
-  IconData _getStatusIcon(String status) {
-    if (status == 'Done') return Icons.check_circle;
-    if (status == 'In Progress') return Icons.autorenew;
-    return Icons.assignment;
   }
 }
 
-class TaskDetailScreen extends StatefulWidget {
-  final Task task;
-  const TaskDetailScreen({super.key, required this.task});
-
-  @override
-  State<TaskDetailScreen> createState() => _TaskDetailScreenState();
-}
-
-class _TaskDetailScreenState extends State<TaskDetailScreen> {
-  late String currentStatus;
-
-  @override
-  void initState() {
-    super.initState();
-    currentStatus = widget.task.status;
-  }
+// ================= 1. HOME SCREEN (PROFILE) =================
+class HomeScreen extends StatelessWidget {
+  const HomeScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Detail Tugas')),
-      body: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Judul Tugas', style: Theme.of(context).textTheme.bodyMedium),
-            const SizedBox(height: 8),
-            Text(
-              widget.task.title,
-              style: Theme.of(
-                context,
-              ).textTheme.displayLarge?.copyWith(fontSize: 24),
-            ),
-            const Divider(height: 32),
-            Text('Deskripsi', style: Theme.of(context).textTheme.bodyMedium),
-            const SizedBox(height: 8),
-            Text(
-              widget.task.description,
-              style: Theme.of(context).textTheme.bodyLarge,
-            ),
-            const Divider(height: 32),
-            Text(
-              'Status Saat Ini',
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-            const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade200,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: DropdownButtonHideUnderline(
-                child: DropdownButton<String>(
-                  value: currentStatus,
-                  isExpanded: true,
-                  items: ['To Do', 'In Progress', 'Done'].map((String value) {
-                    return DropdownMenuItem<String>(
-                      value: value,
-                      child: Text(
-                        value,
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                    );
-                  }).toList(),
-                  onChanged: (newValue) {
-                    if (newValue != null) {
-                      setState(() {
-                        currentStatus = newValue;
-                      });
-                    }
-                  },
-                ),
-              ),
-            ),
-            const Spacer(),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                  widget.task.status = currentStatus;
-                  Navigator.pop(context, widget.task);
-                },
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.all(16),
-                  backgroundColor: Theme.of(context).colorScheme.primary,
-                  foregroundColor: Colors.white,
-                ),
-                child: const Text(
-                  'Simpan Perubahan',
-                  style: TextStyle(fontSize: 16),
-                ),
-              ),
-            ),
-          ],
+      appBar: AppBar(
+        title: const Text(
+          'My Profile',
+          style: TextStyle(fontWeight: FontWeight.bold),
         ),
       ),
-    );
-  }
-}
-
-class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({super.key});
-
-  @override
-  State<ProfileScreen> createState() => _ProfileScreenState();
-}
-
-class _ProfileScreenState extends State<ProfileScreen> {
-  Uint8List? _selectedImageBytes;
-  final ImagePicker _picker = ImagePicker();
-  final String _defaultAvatarUrl =
-      'https://images.unsplash.com/photo-1511367461989-f85a21fda167?w=400&q=80';
-
-  Future<void> _pickAvatar() async {
-    try {
-      final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
-      if (image != null) {
-        final bytes = await image.readAsBytes();
-        setState(() {
-          _selectedImageBytes = bytes;
-        });
-      }
-    } catch (e) {
-      debugPrint(e.toString());
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Profil Pengguna')),
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              GestureDetector(
-                onTap: _pickAvatar,
-                child: Stack(
-                  alignment: Alignment.bottomRight,
-                  children: [
-                    CircleAvatar(
-                      radius: 70,
-                      backgroundImage: _selectedImageBytes != null
-                          ? MemoryImage(_selectedImageBytes!) as ImageProvider
-                          : NetworkImage(_defaultAvatarUrl),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: const BoxDecoration(
-                        color: Colors.deepPurple,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.camera_alt,
-                        color: Colors.white,
-                        size: 20,
-                      ),
+              Container(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.teal.shade200, width: 4),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.teal.withOpacity(0.2),
+                      blurRadius: 20,
+                      spreadRadius: 5,
                     ),
                   ],
+                ),
+                child: const CircleAvatar(
+                  radius: 70,
+                  backgroundImage: NetworkImage(
+                    'https://images.unsplash.com/photo-1511367461989-f85a21fda167?w=400&q=80',
+                  ),
                 ),
               ),
               const SizedBox(height: 24),
@@ -488,26 +188,280 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 style: Theme.of(context).textTheme.displayLarge,
               ),
               const SizedBox(height: 8),
-              Text(
-                'IT Student / Developer',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleLarge?.copyWith(color: Colors.deepPurple),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.teal.shade50,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  'IT Student | Full-Stack Developer',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: Colors.teal.shade700,
+                  ),
+                ),
               ),
-              const SizedBox(height: 16),
-              const ListTile(
-                leading: Icon(Icons.school, color: Colors.deepPurple),
-                title: Text('Universitas Pendidikan Nasional'),
-                subtitle: Text('Information Technology'),
+              const SizedBox(height: 24),
+              const Card(
+                child: Padding(
+                  padding: EdgeInsets.all(16.0),
+                  child: Column(
+                    children: [
+                      ListTile(
+                        leading: Icon(Icons.school, color: Colors.teal),
+                        title: Text('Universitas Pendidikan Nasional'),
+                        subtitle: Text('Information Technology - Final Year'),
+                      ),
+                      Divider(),
+                      ListTile(
+                        leading: Icon(Icons.location_on, color: Colors.teal),
+                        title: Text('Bali, Indonesia'),
+                        subtitle: Text('Available for Freelance'),
+                      ),
+                    ],
+                  ),
+                ),
               ),
-              const ListTile(
-                leading: Icon(Icons.email, color: Colors.deepPurple),
-                title: Text('thomas.carlos@email.com'),
-                subtitle: Text('Email Resmi'),
+              const SizedBox(height: 24),
+              Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                alignment: WrapAlignment.center,
+                children: [
+                  _buildSkillChip('Flutter / Dart'),
+                  _buildSkillChip('Angular'),
+                  _buildSkillChip('PHP / MySQL'),
+                  _buildSkillChip('IoT & Python'),
+                ],
               ),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildSkillChip(String label) {
+    return Chip(
+      label: Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
+      backgroundColor: Colors.white,
+      side: BorderSide(color: Colors.teal.shade200),
+      avatar: const Icon(Icons.check_circle, size: 18, color: Colors.teal),
+    );
+  }
+}
+
+// ================= 2. PROJECTS SCREEN =================
+class ProjectsScreen extends StatelessWidget {
+  const ProjectsScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final List<Map<String, String>> projects = [
+      {
+        'title': 'E-Posyandu Application',
+        'desc':
+            'A comprehensive platform built with Angular and Firebase with CI/CD.',
+        'image':
+            'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=400&q=80',
+      },
+      {
+        'title': 'Coffee Plant IoT',
+        'desc':
+            'Environmental monitoring system using ESP32, MQTT, and Telegram.',
+        'image':
+            'https://images.unsplash.com/photo-1497935586351-b67a49e012bf?w=400&q=80',
+      },
+    ];
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text(
+          'Portfolio Projects',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+      ),
+      body: ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: projects.length,
+        itemBuilder: (context, index) {
+          return Card(
+            margin: const EdgeInsets.only(bottom: 20),
+            clipBehavior: Clip.antiAlias,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Image.network(
+                  projects[index]['image']!,
+                  height: 180,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        projects[index]['title']!,
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        projects[index]['desc']!,
+                        style: Theme.of(context).textTheme.bodyLarge,
+                      ),
+                      const SizedBox(height: 16),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: OutlinedButton.icon(
+                          onPressed: () => print(
+                            'Melihat detail project: ${projects[index]['title']}',
+                          ),
+                          icon: const Icon(Icons.arrow_forward, size: 18),
+                          label: const Text('View Details'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+// ================= 3. TASK DASHBOARD SCREEN =================
+class TaskDashboard extends StatefulWidget {
+  const TaskDashboard({super.key});
+
+  @override
+  State<TaskDashboard> createState() => _TaskDashboardState();
+}
+
+class _TaskDashboardState extends State<TaskDashboard> {
+  final List<Map<String, dynamic>> _tasks = [
+    {
+      'title': 'Draft Thesis Chapter 1',
+      'status': 'In Progress',
+      'color': Colors.blue,
+    },
+    {
+      'title': 'Debug PySpark Script',
+      'status': 'To Do',
+      'color': Colors.orange,
+    },
+    {'title': 'Setup Database API', 'status': 'Done', 'color': Colors.green},
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text(
+          'Task Master',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Colors.teal.shade400, Colors.deepPurple.shade400],
+                ),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.rocket_launch, color: Colors.white, size: 40),
+                  SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Ready to work, Tom?',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Text(
+                          'You have 2 pending tasks today.',
+                          style: TextStyle(color: Colors.white70, fontSize: 14),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text('Recent Tasks', style: Theme.of(context).textTheme.titleLarge),
+            const SizedBox(height: 16),
+            Expanded(
+              child: ListView.builder(
+                itemCount: _tasks.length,
+                itemBuilder: (context, index) {
+                  return Card(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    child: ListTile(
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      leading: Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: _tasks[index]['color'].withOpacity(0.2),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.assignment,
+                          color: _tasks[index]['color'],
+                        ),
+                      ),
+                      title: Text(
+                        _tasks[index]['title'],
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      subtitle: Text(_tasks[index]['status']),
+                      trailing: const Icon(Icons.more_vert),
+                      onTap: () =>
+                          print('Membuka tugas: ${_tasks[index]['title']}'),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () {
+          print('Tombol Tambah Tugas Ditekan');
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Fitur tambah tugas siap diintegrasikan dengan API!',
+              ),
+            ),
+          );
+        },
+        icon: const Icon(Icons.add),
+        label: const Text('New Task'),
       ),
     );
   }
