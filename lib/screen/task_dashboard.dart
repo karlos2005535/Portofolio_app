@@ -11,8 +11,13 @@ class TaskDashboard extends StatefulWidget {
 
 class _TaskDashboardState extends State<TaskDashboard> {
   final ApiService _apiService = ApiService();
-  List<Task> _tasks = [];
+
+  List<Task> _allTasks = []; // Data asli dari database
+  List<Task> _filteredTasks = []; // Data yang tampil setelah search/filter
+
   bool _isLoading = true;
+  String _searchQuery = "";
+  String _selectedFilter = "Semua";
 
   @override
   void initState() {
@@ -25,7 +30,8 @@ class _TaskDashboardState extends State<TaskDashboard> {
     try {
       final data = await _apiService.fetchTasks();
       setState(() {
-        _tasks = data;
+        _allTasks = data;
+        _runFilter();
         _isLoading = false;
       });
     } catch (e) {
@@ -33,9 +39,35 @@ class _TaskDashboardState extends State<TaskDashboard> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('Error: $e')));
+        ).showSnackBar(SnackBar(content: Text('Koneksi Gagal: $e')));
       }
     }
+  }
+
+  void _runFilter() {
+    List<Task> results = _allTasks;
+
+    if (_selectedFilter != "Semua") {
+      results = results
+          .where((task) => task.status == _selectedFilter)
+          .toList();
+    }
+
+    if (_searchQuery.isNotEmpty) {
+      results = results
+          .where(
+            (task) =>
+                task.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+                task.description.toLowerCase().contains(
+                  _searchQuery.toLowerCase(),
+                ),
+          )
+          .toList();
+    }
+
+    setState(() {
+      _filteredTasks = results;
+    });
   }
 
   void _showAddTaskDialog() {
@@ -46,14 +78,15 @@ class _TaskDashboardState extends State<TaskDashboard> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Tambah Tugas Baru'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
               controller: titleCtrl,
-              decoration: const InputDecoration(labelText: 'Judul'),
+              decoration: const InputDecoration(labelText: 'Judul Tugas'),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 10),
             TextField(
               controller: descCtrl,
               maxLines: 3,
@@ -67,12 +100,18 @@ class _TaskDashboardState extends State<TaskDashboard> {
             child: const Text('Batal'),
           ),
           ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.deepPurple,
+              foregroundColor: Colors.white,
+            ),
             onPressed: () async {
               if (titleCtrl.text.isNotEmpty) {
                 final newTask = Task(
                   title: titleCtrl.text,
                   description: descCtrl.text,
+                  status: "To Do",
                 );
+
                 final success = await _apiService.addTask(newTask);
                 if (success && mounted) {
                   Navigator.pop(context);
@@ -92,19 +131,67 @@ class _TaskDashboardState extends State<TaskDashboard> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Task Master'),
-        actions: [
-          IconButton(icon: const Icon(Icons.refresh), onPressed: _loadTasks),
-        ],
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(110),
+          child: Column(
+            children: [
+              // Search Bar
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
+                child: TextField(
+                  onChanged: (value) {
+                    _searchQuery = value;
+                    _runFilter();
+                  },
+                  decoration: InputDecoration(
+                    hintText: 'Cari tugas...',
+                    prefixIcon: const Icon(Icons.search),
+                    filled: true,
+                    fillColor: Colors.white,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                ),
+              ),
+              // Filter Chips
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: ["Semua", "To Do", "Done"]
+                    .map(
+                      (f) => Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        child: ChoiceChip(
+                          label: Text(f),
+                          selected: _selectedFilter == f,
+                          onSelected: (val) {
+                            if (val)
+                              setState(() {
+                                _selectedFilter = f;
+                                _runFilter();
+                              });
+                          },
+                        ),
+                      ),
+                    )
+                    .toList(),
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        ),
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : _tasks.isEmpty
-          ? const Center(child: Text('Belum ada tugas.'))
           : ListView.builder(
               padding: const EdgeInsets.all(16),
-              itemCount: _tasks.length,
+              itemCount: _filteredTasks.length,
               itemBuilder: (context, index) {
-                final task = _tasks[index];
+                final task = _filteredTasks[index];
                 return Card(
                   child: ListTile(
                     title: Text(
@@ -112,15 +199,23 @@ class _TaskDashboardState extends State<TaskDashboard> {
                       style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                     subtitle: Text(task.description),
-                    trailing: Chip(label: Text(task.status)),
+                    trailing: Text(
+                      task.status,
+                      style: TextStyle(
+                        color: task.status == "Done"
+                            ? Colors.green
+                            : Colors.orange,
+                      ),
+                    ),
                   ),
                 );
               },
             ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _showAddTaskDialog,
-        icon: const Icon(Icons.add),
-        label: const Text('Tugas Baru'),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _showAddTaskDialog, // Memanggil fungsi dialog
+        backgroundColor: Colors.deepPurple,
+        foregroundColor: Colors.white,
+        child: const Icon(Icons.add),
       ),
     );
   }
