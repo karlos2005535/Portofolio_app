@@ -1,5 +1,5 @@
 name: portfolio_app
-description: "A new Flutter project."
+description: "Flutter project."
 publish_to: "none"
 
 version: 1.0.0+1
@@ -13,6 +13,8 @@ dependencies:
   cupertino_icons: ^1.0.8
   image_picker: ^1.0.7
   http: ^1.6.0
+  flutter_bloc: ^8.1.4
+  equatable: ^2.0.5
 
 dev_dependencies:
   flutter_test:

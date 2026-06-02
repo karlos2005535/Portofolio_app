@@ -31,4 +31,39 @@ class ApiService {
       return false;
     }
   }
+
+  Future<bool> updateTask(Task task) async {
+    try {
+      final response = await http.put(
+        Uri.parse('$apiUrl?id=${task.id}'),
+        headers: {"Content-Type": "application/json"},
+        body: json.encode(task.toJson()),
+      );
+      return response.statusCode == 200;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<bool> deleteTask(String taskId) async {
+    try {
+      final response = await http.delete(Uri.parse('$apiUrl?id=$taskId'));
+      return response.statusCode == 200;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<bool> updateTaskStatus(String taskId, String newStatus) async {
+    try {
+      final response = await http.patch(
+        Uri.parse('$apiUrl?id=$taskId'),
+        headers: {"Content-Type": "application/json"},
+        body: json.encode({"status": newStatus}),
+      );
+      return response.statusCode == 200;
+    } catch (e) {
+      return false;
+    }
+  }
 }

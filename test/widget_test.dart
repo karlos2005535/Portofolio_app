@@ -1,23 +1,61 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
-// Pastikan nama package ini sesuai dengan nama di pubspec.yaml Anda
+import 'package:bloc_test/bloc_test.dart';
+import 'package:mockito/mockito.dart';
+import 'package:mockito/annotations.dart';
 import 'package:portfolio_app/main.dart';
+import 'package:portfolio_app/bloc/task_bloc.dart';
+import 'package:portfolio_app/services/api_service.dart';
+import 'package:portfolio_app/models/task_model.dart';
 
+@GenerateMocks([ApiService])
 void main() {
-  testWidgets('Memastikan Task Manager berjalan (Smoke Test)', (
-    WidgetTester tester,
-  ) async {
-    // Build aplikasi Task Manager kita dan panggil frame pertama.
-    await tester.pumpWidget(const TaskManagerApp());
+  late MockApiService mockApiService;
 
-    // Verifikasi bahwa halaman utama berhasil dimuat dengan mencari teks di AppBar.
-    expect(find.text('Dashboard Tugas'), findsOneWidget);
+  setUp(() {
+    mockApiService = MockApiService();
+  });
 
-    // Verifikasi bahwa kartu ringkasan 'To Do' juga muncul di layar.
-    expect(find.text('To Do'), findsOneWidget);
+  group('Task Manager App Tests', () {
+    testWidgets('Memastikan Task Manager berjalan (Smoke Test)', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(const TaskManagerApp());
 
-    // Memastikan tidak ada teks error atau teks counter bawaan ('0').
-    expect(find.text('0'), findsNothing);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(MaterialApp), findsOneWidget);
+    });
+
+    testWidgets('Menampilkan judul Task Master di AppBar', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(const TaskManagerApp());
+
+      await tester.pumpAndSettle();
+
+      expect(find.text('Task Master'), findsOneWidget);
+    });
+
+    testWidgets('Menampilkan tombol floating action button', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(const TaskManagerApp());
+
+      await tester.pumpAndSettle();
+
+      expect(find.byType(FloatingActionButton), findsOneWidget);
+      expect(find.text('Tugas Baru'), findsOneWidget);
+    });
+
+    testWidgets('Menampilkan tombol refresh di AppBar', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(const TaskManagerApp());
+
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.refresh), findsOneWidget);
+    });
   });
 }
