@@ -1,26 +1,26 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'services/api_service.dart';
+import 'blocs/task_bloc.dart';
 import 'screen/task_dashboard.dart';
 
-void main() => runApp(const TaskManagerApp());
+void main() {
+  runApp(const MyApp());
+}
 
-class TaskManagerApp extends StatelessWidget {
-  const TaskManagerApp({super.key});
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Task Master',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.deepPurple,
-          foregroundColor: Colors.white,
-          centerTitle: true,
-        ),
+      theme: ThemeData(primarySwatch: Colors.deepPurple, useMaterial3: true),
+      // Menyediakan BLoC secara global ke screen di bawahnya
+      home: BlocProvider(
+        create: (context) => TaskBloc(apiService: ApiService()),
+        child: const TaskDashboard(),
       ),
-      home: const TaskDashboard(),
     );
   }
 }

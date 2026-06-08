@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import '../models/task_model.dart';
-import '../services/api_service.dart';
+import '../blocs/task_bloc.dart';
+import '../blocs/task_event.dart';
+import '../blocs/task_state.dart';
 
 class TaskDashboard extends StatefulWidget {
   const TaskDashboard({super.key});
@@ -10,73 +13,20 @@ class TaskDashboard extends StatefulWidget {
 }
 
 class _TaskDashboardState extends State<TaskDashboard> {
-  final ApiService _apiService = ApiService();
-
-  List<Task> _allTasks = []; // Data asli dari database
-  List<Task> _filteredTasks = []; // Data yang tampil setelah search/filter
-
-  bool _isLoading = true;
-  String _searchQuery = "";
-  String _selectedFilter = "Semua";
-
   @override
   void initState() {
     super.initState();
-    _loadTasks();
+    // Kirim event pertama kali untuk mengambil data dari server
+    context.read<TaskBloc>().add(LoadTasks());
   }
 
-  Future<void> _loadTasks() async {
-    setState(() => _isLoading = true);
-    try {
-      final data = await _apiService.fetchTasks();
-      setState(() {
-        _allTasks = data;
-        _runFilter();
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() => _isLoading = false);
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Koneksi Gagal: $e')));
-      }
-    }
-  }
-
-  void _runFilter() {
-    List<Task> results = _allTasks;
-
-    if (_selectedFilter != "Semua") {
-      results = results
-          .where((task) => task.status == _selectedFilter)
-          .toList();
-    }
-
-    if (_searchQuery.isNotEmpty) {
-      results = results
-          .where(
-            (task) =>
-                task.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-                task.description.toLowerCase().contains(
-                  _searchQuery.toLowerCase(),
-                ),
-          )
-          .toList();
-    }
-
-    setState(() {
-      _filteredTasks = results;
-    });
-  }
-
-  void _showAddTaskDialog() {
+  void _showAddTaskDialog(BuildContext context) {
     final titleCtrl = TextEditingController();
     final descCtrl = TextEditingController();
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Tambah Tugas Baru'),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
         content: Column(
@@ -96,7 +46,7 @@ class _TaskDashboardState extends State<TaskDashboard> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: const Text('Batal'),
           ),
           ElevatedButton(
@@ -104,7 +54,7 @@ class _TaskDashboardState extends State<TaskDashboard> {
               backgroundColor: Colors.deepPurple,
               foregroundColor: Colors.white,
             ),
-            onPressed: () async {
+            onPressed: () {
               if (titleCtrl.text.isNotEmpty) {
                 final newTask = Task(
                   title: titleCtrl.text,
@@ -112,11 +62,9 @@ class _TaskDashboardState extends State<TaskDashboard> {
                   status: "To Do",
                 );
 
-                final success = await _apiService.addTask(newTask);
-                if (success && mounted) {
-                  Navigator.pop(context);
-                  _loadTasks();
-                }
+                // Memicu event tambah tugas ke BLoC menggunakan build context induk
+                context.read<TaskBloc>().add(AddTaskPressed(newTask));
+                Navigator.pop(dialogContext);
               }
             },
             child: const Text('Simpan'),
@@ -128,70 +76,95 @@ class _TaskDashboardState extends State<TaskDashboard> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Task Master'),
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(110),
-          child: Column(
-            children: [
-              // Search Bar
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
-                ),
-                child: TextField(
-                  onChanged: (value) {
-                    _searchQuery = value;
-                    _runFilter();
-                  },
-                  decoration: InputDecoration(
-                    hintText: 'Cari tugas...',
-                    prefixIcon: const Icon(Icons.search),
-                    filled: true,
-                    fillColor: Colors.white,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
+    return BlocListener<TaskBloc, TaskState>(
+      listenWhen: (previous, current) =>
+          previous.errorMessage != current.errorMessage,
+      listener: (context, state) {
+        if (state.errorMessage != null) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(state.errorMessage!)));
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Task Master'),
+          bottom: PreferredSize(
+            preferredSize: const Size.fromHeight(110),
+            child: Column(
+              children: [
+                // Search Bar
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  child: TextField(
+                    onChanged: (value) {
+                      context.read<TaskBloc>().add(SearchQueryChanged(value));
+                    },
+                    decoration: InputDecoration(
+                      hintText: 'Cari tugas...',
+                      prefixIcon: const Icon(Icons.search),
+                      filled: true,
+                      fillColor: Colors.white,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
                     ),
                   ),
                 ),
-              ),
-              // Filter Chips
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: ["Semua", "To Do", "Done"]
-                    .map(
-                      (f) => Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 4),
-                        child: ChoiceChip(
-                          label: Text(f),
-                          selected: _selectedFilter == f,
-                          onSelected: (val) {
-                            if (val)
-                              setState(() {
-                                _selectedFilter = f;
-                                _runFilter();
-                              });
-                          },
+                // Filter Chips
+                BlocBuilder<TaskBloc, TaskState>(
+                  buildWhen: (previous, current) =>
+                      previous.selectedFilter != current.selectedFilter,
+                  builder: (context, state) {
+                    return Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        _buildChip(
+                          context,
+                          "Semua",
+                          TaskStatusFilter.all,
+                          state.selectedFilter,
                         ),
-                      ),
-                    )
-                    .toList(),
-              ),
-              const SizedBox(height: 8),
-            ],
+                        _buildChip(
+                          context,
+                          "To Do",
+                          TaskStatusFilter.toDo,
+                          state.selectedFilter,
+                        ),
+                        _buildChip(
+                          context,
+                          "Done",
+                          TaskStatusFilter.done,
+                          state.selectedFilter,
+                        ),
+                      ],
+                    );
+                  },
+                ),
+                const SizedBox(height: 8),
+              ],
+            ),
           ),
         ),
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : ListView.builder(
+        body: BlocBuilder<TaskBloc, TaskState>(
+          builder: (context, state) {
+            if (state.isLoading) {
+              return const Center(child: CircularProgressIndicator());
+            }
+
+            if (state.filteredTasks.isEmpty) {
+              return const Center(child: Text('Tidak ada tugas ditemukan.'));
+            }
+
+            return ListView.builder(
               padding: const EdgeInsets.all(16),
-              itemCount: _filteredTasks.length,
+              itemCount: state.filteredTasks.length,
               itemBuilder: (context, index) {
-                final task = _filteredTasks[index];
+                final task = state.filteredTasks[index];
                 return Card(
                   child: ListTile(
                     title: Text(
@@ -210,12 +183,35 @@ class _TaskDashboardState extends State<TaskDashboard> {
                   ),
                 );
               },
-            ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _showAddTaskDialog, // Memanggil fungsi dialog
-        backgroundColor: Colors.deepPurple,
-        foregroundColor: Colors.white,
-        child: const Icon(Icons.add),
+            );
+          },
+        ),
+        floatingActionButton: FloatingActionButton(
+          onPressed: () => _showAddTaskDialog(context),
+          backgroundColor: Colors.deepPurple,
+          foregroundColor: Colors.white,
+          child: const Icon(Icons.add),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildChip(
+    BuildContext context,
+    String label,
+    TaskStatusFilter filterValue,
+    TaskStatusFilter currentSelected,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: ChoiceChip(
+        label: Text(label),
+        selected: currentSelected == filterValue,
+        onSelected: (isSelected) {
+          if (isSelected) {
+            context.read<TaskBloc>().add(FilterChanged(filterValue));
+          }
+        },
       ),
     );
   }
