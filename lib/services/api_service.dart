@@ -1,9 +1,10 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import '../models/task_model.dart';
+import '../models/task_model.dart'; // Mengimpor model Task
 
 class ApiService {
-  static const String apiUrl = 'http://10.0.2.2/task_api/tasks.php';
+  // Ganti alamat ini jika kamu menggunakan device fisik (gunakan IP WiFi komputermu)
+  final String apiUrl = 'http://10.0.2.2/task_api/tasks.php';
 
   Future<List<Task>> fetchTasks() async {
     try {
@@ -15,7 +16,7 @@ class ApiService {
         throw Exception('Gagal memuat data');
       }
     } catch (e) {
-      rethrow;
+      throw Exception('Error jaringan: $e');
     }
   }
 
@@ -26,8 +27,9 @@ class ApiService {
         headers: {"Content-Type": "application/json"},
         body: json.encode(task.toJson()),
       );
-      return response.statusCode == 200;
+      return response.statusCode == 200 || response.statusCode == 201;
     } catch (e) {
+      print('Error Add Task: $e');
       return false;
     }
   }
