@@ -20,7 +20,25 @@ class TaskDashboardView extends StatelessWidget {
           ),
         ],
       ),
-      body: BlocBuilder<TaskBloc, TaskState>(
+      body: BlocConsumer<TaskBloc, TaskState>(
+        listener: (context, state) {
+          if (state is TaskLoaded && state.notification != null) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Row(
+                  children: [
+                    const Icon(Icons.notifications_active, color: Colors.white),
+                    const SizedBox(width: 8),
+                    Expanded(child: Text(state.notification!)),
+                  ],
+                ),
+                backgroundColor: Colors.deepPurple,
+                behavior: SnackBarBehavior.floating,
+                duration: const Duration(seconds: 3),
+              ),
+            );
+          }
+        },
         builder: (context, state) {
           if (state is TaskLoading) {
             return const Center(child: CircularProgressIndicator());
@@ -28,7 +46,6 @@ class TaskDashboardView extends StatelessWidget {
             if (state.tasks.isEmpty) {
               return const Center(child: Text('Belum ada tugas.'));
             }
-
             return ListView.builder(
               padding: const EdgeInsets.all(16),
               itemCount: state.tasks.length,
@@ -40,8 +57,90 @@ class TaskDashboardView extends StatelessWidget {
                       task.title,
                       style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
-                    subtitle: Text(task.description),
-                    trailing: Chip(label: Text(task.status)),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(task.description),
+                        const SizedBox(height: 4),
+                        Chip(
+                          label: Text(task.status),
+                          backgroundColor: _getStatusColor(task.status),
+                        ),
+                      ],
+                    ),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        PopupMenuButton<String>(
+                          onSelected: (newStatus) {
+                            context.read<TaskBloc>().add(
+                              UpdateTaskStatus(task.id, newStatus),
+                            );
+                          },
+                          itemBuilder: (context) => [
+                            const PopupMenuItem(
+                              value: 'To Do',
+                              child: Text('To Do'),
+                            ),
+                            const PopupMenuItem(
+                              value: 'In Progress',
+                              child: Text('In Progress'),
+                            ),
+                            const PopupMenuItem(
+                              value: 'Done',
+                              child: Text('Done'),
+                            ),
+                          ],
+                          child: const Icon(Icons.more_vert),
+                        ),
+                        // ==========================================
+                        // PERBAIKAN DI TOMBOL HAPUS DIMULAI DI SINI
+                        // ==========================================
+                        IconButton(
+                          icon: const Icon(Icons.delete, color: Colors.red),
+                          onPressed: () {
+                            // Simpan context utama ke variabel agar tidak tertimpa oleh dialog
+                            final parentContext = context;
+
+                            showDialog(
+                              context: parentContext,
+                              // Ubah nama context menjadi dialogContext
+                              builder: (dialogContext) => AlertDialog(
+                                title: const Text('Hapus Tugas'),
+                                content: const Text(
+                                  'Apakah Anda yakin ingin menghapus tugas ini?',
+                                ),
+                                actions: [
+                                  TextButton(
+                                    // Gunakan dialogContext untuk menutup pop-up
+                                    onPressed: () =>
+                                        Navigator.pop(dialogContext),
+                                    child: const Text('Batal'),
+                                  ),
+                                  TextButton(
+                                    onPressed: () {
+                                      // Gunakan parentContext untuk mengakses BLoC
+                                      parentContext.read<TaskBloc>().add(
+                                        DeleteTask(task.id),
+                                      );
+                                      Navigator.pop(dialogContext);
+                                    },
+                                    child: const Text(
+                                      'Hapus',
+                                      style: TextStyle(color: Colors.red),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                        // ==========================================
+                        // PERBAIKAN SELESAI
+                        // ==========================================
+                      ],
+                    ),
+                    onTap: () => _showTaskDialog(context, task: task),
                   ),
                 );
               },
@@ -72,10 +171,23 @@ class TaskDashboardView extends StatelessWidget {
     );
   }
 
-  void _showTaskDialog(BuildContext parentContext) {
-    final titleCtrl = TextEditingController();
-    final descCtrl = TextEditingController();
-    String selectedStatus = 'To Do';
+  Color _getStatusColor(String status) {
+    switch (status) {
+      case 'To Do':
+        return Colors.grey;
+      case 'In Progress':
+        return Colors.orange;
+      case 'Done':
+        return Colors.green;
+      default:
+        return Colors.blue;
+    }
+  }
+
+  void _showTaskDialog(BuildContext parentContext, {Task? task}) {
+    final titleCtrl = TextEditingController(text: task?.title ?? '');
+    final descCtrl = TextEditingController(text: task?.description ?? '');
+    String selectedStatus = task?.status ?? 'To Do';
 
     showDialog(
       context: parentContext,
@@ -83,7 +195,7 @@ class TaskDashboardView extends StatelessWidget {
         return StatefulBuilder(
           builder: (stateContext, setState) {
             return AlertDialog(
-              title: const Text('Tambah Tugas Baru'),
+              title: Text(task == null ? 'Tambah Tugas Baru' : 'Edit Tugas'),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -99,7 +211,7 @@ class TaskDashboardView extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
                   DropdownButtonFormField<String>(
-                    initialValue: selectedStatus,
+                    value: selectedStatus,
                     items: const [
                       DropdownMenuItem(value: 'To Do', child: Text('To Do')),
                       DropdownMenuItem(
@@ -124,15 +236,22 @@ class TaskDashboardView extends StatelessWidget {
                 ),
                 ElevatedButton(
                   onPressed: () {
-                    if (titleCtrl.text.trim().isNotEmpty) {
+                    if (titleCtrl.text.isNotEmpty) {
                       final newTask = Task(
-                        id: DateTime.now().millisecondsSinceEpoch.toString(),
-                        title: titleCtrl.text.trim(),
-                        description: descCtrl.text.trim(),
+                        id:
+                            task?.id ??
+                            DateTime.now().millisecondsSinceEpoch.toString(),
+                        title: titleCtrl.text,
+                        description: descCtrl.text,
                         status: selectedStatus,
                       );
 
-                      parentContext.read<TaskBloc>().add(AddTask(newTask));
+                      if (task == null) {
+                        parentContext.read<TaskBloc>().add(AddTask(newTask));
+                      } else {
+                        parentContext.read<TaskBloc>().add(UpdateTask(newTask));
+                      }
+
                       Navigator.pop(dialogContext);
                     }
                   },

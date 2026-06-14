@@ -42,3 +42,10 @@ class UpdateTaskStatus extends TaskEvent {
   @override
   List<Object?> get props => [taskId, newStatus];
 }
+
+class NotificationReceived extends TaskEvent {
+  final String message;
+  const NotificationReceived(this.message);
+  @override
+  List<Object?> get props => [message];
+}

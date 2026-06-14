@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/task_model.dart'; // Mengimpor model Task
+import 'package:flutter/foundation.dart'; // Tambahkan ini untuk debugPrint
 
 class ApiService {
   // Ganti alamat ini jika kamu menggunakan device fisik (gunakan IP WiFi komputermu)
@@ -29,7 +30,7 @@ class ApiService {
       );
       return response.statusCode == 200 || response.statusCode == 201;
     } catch (e) {
-      print('Error Add Task: $e');
+      debugPrint('Error Add Task: $e');
       return false;
     }
   }

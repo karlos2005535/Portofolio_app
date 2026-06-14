@@ -8,16 +8,19 @@ abstract class TaskState extends Equatable {
   List<Object?> get props => [];
 }
 
-class TaskInitial extends TaskState {}
+class TaskInitial
+    extends TaskState {} //masih memproses data, belum ada data yang ditampilkan
 
-class TaskLoading extends TaskState {}
+class TaskLoading extends TaskState {} //menampilkan data
 
 class TaskLoaded extends TaskState {
   final List<Task> tasks;
-  const TaskLoaded(this.tasks);
+  final String? notification; // Tambahan untuk memicu SnackBar
+
+  const TaskLoaded(this.tasks, {this.notification});
 
   @override
-  List<Object?> get props => [tasks];
+  List<Object?> get props => [tasks, notification];
 }
 
 class TaskError extends TaskState {
