@@ -13,7 +13,7 @@ class Task {
 
   factory Task.fromJson(Map<String, dynamic> json) {
     return Task(
-      id: json['id']?.toString() ?? '',
+      id: json['id'] != null ? json['id'].toString() : '',
       title: json['title'] ?? '',
       description: json['description'] ?? '',
       status: json['status'] ?? 'To Do',

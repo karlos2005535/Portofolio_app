@@ -5,8 +5,7 @@ import 'package:flutter/foundation.dart'; // Tambahkan ini untuk debugPrint
 
 class ApiService {
   // Ganti alamat ini jika kamu menggunakan device fisik (gunakan IP WiFi komputermu)
-  final String apiUrl =
-      'http://10.0.2.2/task_api/controllers/TaskController.php';
+  final String apiUrl = 'http://10.0.2.2:8000/controllers/TaskController.php';
   Future<List<Task>> fetchTasks() async {
     try {
       final response = await http.get(Uri.parse(apiUrl));
